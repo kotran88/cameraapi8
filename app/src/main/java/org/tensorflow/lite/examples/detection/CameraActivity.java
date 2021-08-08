@@ -74,6 +74,11 @@ import androidx.core.content.ContextCompat;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
+import com.karumi.dexter.Dexter;
+import com.karumi.dexter.MultiplePermissionsReport;
+import com.karumi.dexter.PermissionToken;
+import com.karumi.dexter.listener.PermissionRequest;
+import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -108,6 +113,11 @@ public abstract class CameraActivity extends AppCompatActivity
   CameraConnectionFragment camera2Fragment;
   CameraManager manager;
   private static final String PERMISSION_CAMERA = Manifest.permission.CAMERA;
+
+  private static final String PERMISSION_W = Manifest.permission.WRITE_EXTERNAL_STORAGE;
+  private static final String PERMISSION_R = Manifest.permission.READ_EXTERNAL_STORAGE;
+
+  private static final String PERMISSION_I = Manifest.permission.INTERNET;
   protected int previewWidth = 0;
   protected int previewHeight = 0;
   private boolean debug = false;
@@ -207,33 +217,32 @@ public abstract class CameraActivity extends AppCompatActivity
 
 
   private void checkPermission() {
-    int accessCLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA);
-    int accessFLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO);
-    int accessBackGroundLocation = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
-    int ex = ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE);
 
-    List<String> listRequestPermission = new ArrayList<String>();
+    Dexter.withActivity(this).withPermissions(Manifest.permission.CAMERA,
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.READ_EXTERNAL_STORAGE,
+            Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            .withListener(new MultiplePermissionsListener() {
+              @Override
+              public void onPermissionsChecked(MultiplePermissionsReport report) {
+                // check if all permissions are granted or not
+                if (report.areAllPermissionsGranted()) {
 
-    if (accessCLocation != PackageManager.PERMISSION_GRANTED) {
-      listRequestPermission.add(Manifest.permission.CAMERA);
-    }
-    if (accessFLocation  != PackageManager.PERMISSION_GRANTED) {
-      listRequestPermission.add(Manifest.permission.RECORD_AUDIO);
-    }
+                }
+                // check for permanent denial of any permission show alert dialog
+                if (report.isAnyPermissionPermanentlyDenied()) {
+                  // open Settings activity
+                }
+              }
 
-    if (ex  != PackageManager.PERMISSION_GRANTED) {
-      listRequestPermission.add(Manifest.permission.READ_EXTERNAL_STORAGE);
-    }
 
-    if (Build.VERSION.SDK_INT > Build.VERSION_CODES.Q) {
-      if (accessBackGroundLocation != PackageManager.PERMISSION_GRANTED) {
-        listRequestPermission.add(Manifest.permission.WRITE_EXTERNAL_STORAGE);
-      }
-    }
-    //퍼미션이 없으면 초기화 안함, 액티비티에서 물어봄
-    if (listRequestPermission.isEmpty()) {
-      Log.e("testing88","App locationCreate");
-    }
+              @Override
+              public void onPermissionRationaleShouldBeShown(List<PermissionRequest> permissions, PermissionToken token) {
+                token.continuePermissionRequest();
+              }
+            }).withErrorListener(error -> Toast.makeText(this.getApplicationContext(), "Error occurred! ", Toast.LENGTH_SHORT).show())
+            .onSameThread()
+            .check();
   }
   @Override
   protected void onCreate(final Bundle savedInstanceState) {
@@ -580,7 +589,7 @@ public abstract class CameraActivity extends AppCompatActivity
 
   private boolean hasPermission() {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-      return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED;
+      return checkSelfPermission(PERMISSION_CAMERA) == PackageManager.PERMISSION_GRANTED && checkSelfPermission(PERMISSION_W) == PackageManager.PERMISSION_GRANTED&& checkSelfPermission(PERMISSION_R) == PackageManager.PERMISSION_GRANTED;
     } else {
       return true;
     }
